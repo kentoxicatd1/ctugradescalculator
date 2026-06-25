@@ -3,9 +3,17 @@
 import { useState, useRef } from 'react';
 import { UploadCloud, File as FileIcon, X, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { extractTextFromPdf, parseText } from '@/lib/gwa';
 import { useGwaStore } from '@/store/useGwaStore';
+import { cn } from '@/lib/utils';
+
+function isLikelyPdf(file: File) {
+  const type = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+
+  return type === 'application/pdf' || type === 'application/x-pdf' || name.endsWith('.pdf');
+}
 
 export function FileUpload() {
   const [isDragging, setIsDragging] = useState(false);
@@ -26,7 +34,7 @@ export function FileUpload() {
   };
 
   const processFile = async (file: File) => {
-    if (file.type !== 'application/pdf') {
+    if (!isLikelyPdf(file)) {
       setError('Please upload a valid PDF file.');
       return;
     }
@@ -44,12 +52,12 @@ export function FileUpload() {
       }
       
       setEntries(entries, file.name);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      const detailedError = err instanceof Error 
-        ? `${err.name}: ${err.message}\n${err.stack || ''}` 
-        : String(err);
-      setError(detailedError);
+      const message = err instanceof Error && err.message
+        ? err.message
+        : 'Unable to read this PDF. Please try downloading the grade report again and upload that copy.';
+      setError(message);
       reset();
     } finally {
       setIsProcessing(false);
@@ -121,19 +129,25 @@ export function FileUpload() {
           <p className="text-sm text-destructive font-medium">{error}</p>
         )}
 
-        <Button 
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isProcessing}
-          className="bg-ctu-accent text-ctu-text-primary hover:bg-ctu-accent/90"
+        <label
+          htmlFor="grade-pdf-upload"
+          aria-disabled={isProcessing}
+          className={cn(
+            buttonVariants(),
+            'bg-ctu-accent text-ctu-text-primary hover:bg-ctu-accent/90',
+            isProcessing && 'pointer-events-none opacity-50'
+          )}
         >
           Select PDF
-        </Button>
+        </label>
         <input 
+          id="grade-pdf-upload"
           type="file" 
           ref={fileInputRef} 
           onChange={handleFileChange} 
-          accept="application/pdf" 
-          className="hidden" 
+          accept="application/pdf,.pdf"
+          className="sr-only" 
+          disabled={isProcessing}
         />
       </CardContent>
     </Card>

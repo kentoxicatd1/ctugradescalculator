@@ -6,6 +6,29 @@ export interface GradeEntry {
   gradePoint: number;
 }
 
+type PdfJsLib = typeof import('pdfjs-dist');
+
+interface PdfPage {
+  getTextContent?: () => Promise<{ items: unknown[] }>;
+}
+
+interface PdfDocument {
+  numPages: number;
+  getPage: (pageNumber: number) => Promise<PdfPage>;
+}
+
+interface PdfTextItem {
+  str: string;
+  transform: number[];
+}
+
+function isPdfTextItem(item: unknown): item is PdfTextItem {
+  if (!item || typeof item !== 'object') return false;
+
+  const candidate = item as { str?: unknown; transform?: unknown };
+  return typeof candidate.str === 'string' && Array.isArray(candidate.transform);
+}
+
 export function isPassed(entry: GradeEntry): boolean {
   return entry.gradePoint >= 1.0 && entry.gradePoint <= 3.0;
 }
@@ -62,10 +85,13 @@ export function getHonorsStatus(gpa: number, entries: GradeEntry[]): string {
 export async function extractTextFromPdf(file: File): Promise<string> {
   // Dynamically import pdfjs-dist v3.11 (has native iOS Safari support)
   const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    typeof window !== 'undefined'
+      ? new URL('/pdf.worker.min.js', window.location.origin).toString()
+      : '/pdf.worker.min.js';
 
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const bytes = new Uint8Array(await readFileAsArrayBuffer(file));
+  const pdf = await loadPdfDocument(pdfjsLib, bytes);
   
   let fullText = '';
   
@@ -75,11 +101,11 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     // Wrap getTextContent in safety check for iOS WebKit stability
     const textContent = typeof page.getTextContent === 'function'
       ? await page.getTextContent()
-      : { items: [] as any[] };
+      : { items: [] };
     
     // Sort items by vertical position (descending), then horizontal (ascending)
-    const items = textContent.items.map((item: any) => item);
-    items.sort((a: any, b: any) => {
+    const items = textContent.items.filter(isPdfTextItem);
+    items.sort((a, b) => {
       const yA = a.transform[5];
       const yB = b.transform[5];
       if (Math.abs(yA - yB) > 5) {
@@ -92,13 +118,13 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     let pageText = '';
     
     for (const item of items) {
-      const currentY = (item as any).transform[5];
+      const currentY = item.transform[5];
       if (lastY !== -1 && Math.abs(currentY - lastY) > 5) {
         pageText += '\n';
       } else if (lastY !== -1) {
         pageText += ' ';
       }
-      pageText += (item as any).str;
+      pageText += item.str;
       lastY = currentY;
     }
     
@@ -106,6 +132,29 @@ export async function extractTextFromPdf(file: File): Promise<string> {
   }
   
   return fullText;
+}
+
+function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
+  if (typeof file.arrayBuffer === 'function') {
+    return file.arrayBuffer();
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error('Unable to read the selected PDF.'));
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(reader.result);
+      } else {
+        reject(new Error('Unable to read the selected PDF.'));
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function loadPdfDocument(pdfjsLib: PdfJsLib, bytes: Uint8Array): Promise<PdfDocument> {
+  return pdfjsLib.getDocument({ data: bytes.slice() }).promise as Promise<PdfDocument>;
 }
 
 // Regex patterns mirroring the Android implementation
@@ -116,7 +165,7 @@ const gradeAtEnd = /(\d+\.\d{1,2})\s*$/;
 /**
  * Parses the raw text extracted from the PDF into GradeEntry objects.
  */
-export function parseText(text: String): GradeEntry[] {
+export function parseText(text: string): GradeEntry[] {
   const results: GradeEntry[] = [];
   
   // Split on newlines AND form-feed (\f) characters.
