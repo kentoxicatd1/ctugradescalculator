@@ -74,7 +74,7 @@ export async function extractTextFromPdf(file: File): Promise<string> {
 
   // Dynamically import pdfjs-dist to prevent Next.js SSR crashes (DOMMatrix is not defined in Node)
   const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
   const arrayBuffer = await file.arrayBuffer();
   
