@@ -57,103 +57,49 @@ export function getHonorsStatus(gpa: number, entries: GradeEntry[]): string {
 }
 
 /**
- * Extracts plain text from a PDF file using pdfjs-dist.
+ * Extracts plain text from a PDF file using pdfjs-dist v3.11 (iOS compatible).
  */
 export async function extractTextFromPdf(file: File): Promise<string> {
-  // Polyfill Promise.withResolvers for older iOS Safari (< 17.4) where pdfjs-dist crashes without it
-  if (typeof (Promise as any).withResolvers === 'undefined') {
-    (Promise as any).withResolvers = function () {
-      let resolve, reject;
-      const promise = new Promise((res, rej) => {
-        resolve = res;
-        reject = rej;
-      });
-      return { promise, resolve, reject };
-    };
-  }
+  // Dynamically import pdfjs-dist v3.11 (has native iOS Safari support)
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
 
-  let pdfjsLib;
-  try {
-    pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  } catch (err: any) {
-    throw new Error(`Failed to import pdfjs-dist: ${err.message}`);
-  }
-
-  try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.v1.js`;
-  } catch (err: any) {
-    throw new Error(`Failed to set workerSrc: ${err.message}`);
-  }
-
-  let arrayBuffer;
-  try {
-    arrayBuffer = await file.arrayBuffer();
-  } catch (err: any) {
-    throw new Error(`Failed to get file arrayBuffer: ${err.message}`);
-  }
-  
-  let pdf;
-  try {
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    pdf = await loadingTask.promise;
-  } catch (err: any) {
-    throw new Error(`Failed during getDocument: ${err.message}`);
-  }
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   
   let fullText = '';
   
   for (let i = 1; i <= pdf.numPages; i++) {
-    let page;
-    try {
-      page = await pdf.getPage(i);
-    } catch (err: any) {
-      throw new Error(`Failed to getPage(${i}): ${err.message}`);
-    }
-
-    let textContent;
-    try {
-      textContent = typeof page.getTextContent === 'function'
-        ? await page.getTextContent()
-        : { items: [] };
-    } catch (err: any) {
-      throw new Error(`Failed to getTextContent for page ${i}: ${err.message}`);
-    }
+    const page = await pdf.getPage(i);
     
-    let items;
-    try {
-      items = textContent.items.map(item => item as any);
-    } catch (err: any) {
-      throw new Error(`Failed to map textContent items: ${err.message}`);
-    }
-
-    try {
-      items.sort((a, b) => {
-        const yA = a.transform[5];
-        const yB = b.transform[5];
-        if (Math.abs(yA - yB) > 5) {
-          return yB - yA;
-        }
-        return a.transform[4] - b.transform[4];
-      });
-    } catch (err: any) {
-      throw new Error(`Failed to sort page items: ${err.message}`);
-    }
-
-    let pageText = '';
-    try {
-      let lastY = -1;
-      for (const item of items) {
-        const currentY = item.transform[5];
-        if (lastY !== -1 && Math.abs(currentY - lastY) > 5) {
-          pageText += '\n';
-        } else if (lastY !== -1) {
-          pageText += ' ';
-        }
-        pageText += item.str;
-        lastY = currentY;
+    // Wrap getTextContent in safety check for iOS WebKit stability
+    const textContent = typeof page.getTextContent === 'function'
+      ? await page.getTextContent()
+      : { items: [] as any[] };
+    
+    // Sort items by vertical position (descending), then horizontal (ascending)
+    const items = textContent.items.map((item: any) => item);
+    items.sort((a: any, b: any) => {
+      const yA = a.transform[5];
+      const yB = b.transform[5];
+      if (Math.abs(yA - yB) > 5) {
+        return yB - yA;
       }
-    } catch (err: any) {
-      throw new Error(`Failed during items loop on page ${i}: ${err.message}`);
+      return a.transform[4] - b.transform[4];
+    });
+
+    let lastY = -1;
+    let pageText = '';
+    
+    for (const item of items) {
+      const currentY = (item as any).transform[5];
+      if (lastY !== -1 && Math.abs(currentY - lastY) > 5) {
+        pageText += '\n';
+      } else if (lastY !== -1) {
+        pageText += ' ';
+      }
+      pageText += (item as any).str;
+      lastY = currentY;
     }
     
     fullText += pageText + '\f';
