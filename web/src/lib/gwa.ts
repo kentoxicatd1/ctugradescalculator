@@ -60,6 +60,18 @@ export function getHonorsStatus(gpa: number, entries: GradeEntry[]): string {
  * Extracts plain text from a PDF file using pdfjs-dist.
  */
 export async function extractTextFromPdf(file: File): Promise<string> {
+  // Polyfill Promise.withResolvers for older iOS Safari (< 17.4) where pdfjs-dist crashes without it
+  if (typeof (Promise as any).withResolvers === 'undefined') {
+    (Promise as any).withResolvers = function () {
+      let resolve, reject;
+      const promise = new Promise((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    };
+  }
+
   // Dynamically import pdfjs-dist to prevent Next.js SSR crashes (DOMMatrix is not defined in Node)
   const pdfjsLib = await import('pdfjs-dist');
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
