@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 
 export function Header() {
   return (
-    <header className="w-full bg-ctu-primary text-white p-4 shadow-md flex justify-between items-center z-10 relative">
+    <header className="sticky top-0 w-full bg-ctu-primary text-white p-4 shadow-md flex justify-between items-center z-10 md:relative">
       <div className="flex items-center space-x-3">
         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0">
           <Image src="/ctu_logo.png" alt="CTU Logo" width={40} height={40} className="object-cover" priority />
