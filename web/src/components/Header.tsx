@@ -1,14 +1,13 @@
 import { Info } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export function Header() {
   return (
     <header className="w-full bg-ctu-primary text-white p-4 shadow-md flex justify-between items-center z-10 relative">
       <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden">
-          {/* A placeholder for the CTU logo - ideally this would be an actual img tag */}
-          <span className="text-ctu-primary font-bold text-xs">CTU</span>
+        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0">
+          <Image src="/ctu_logo.png" alt="CTU Logo" width={40} height={40} className="object-cover" priority />
         </div>
         <h1 className="text-lg font-bold tracking-wide">CTU Grade Calculator</h1>
       </div>
