@@ -74,7 +74,7 @@ export async function extractTextFromPdf(file: File): Promise<string> {
 
   let pdfjsLib;
   try {
-    pdfjsLib = await import('pdfjs-dist');
+    pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
   } catch (err: any) {
     throw new Error(`Failed to import pdfjs-dist: ${err.message}`);
   }
