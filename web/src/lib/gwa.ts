@@ -157,9 +157,12 @@ async function loadPdfDocument(pdfjsLib: PdfJsLib, bytes: Uint8Array): Promise<P
   return pdfjsLib.getDocument({ data: bytes.slice() }).promise as Promise<PdfDocument>;
 }
 
-// Regex patterns mirroring the Android implementation
-const timePattern = /\d{1,2}:\d{2}[AP]M-\d{1,2}:\d{2}[AP]M/;
-const unitBeforeTime = /(\d+\.\d{2})\s+\d{1,2}:\d{2}[AP]M/;
+// CTU reports use several time formats, including:
+// 04:30PM-07:30PM, 4:30-7:30pm, 1-4pm, 9-12nn, and 9-12nn/1-4pm.
+const timeValue = String.raw`\d{1,2}(?::\d{1,2})?\s*(?:[AP]M|NN)?`;
+const timeRange = String.raw`${timeValue}\s*-\s*${timeValue}`;
+const timePattern = new RegExp(String.raw`${timeRange}(?:\s*/\s*${timeRange})?`, 'i');
+const unitBeforeTime = new RegExp(String.raw`(\d+\.\d{2})\s+(?=${timeRange})`, 'i');
 const gradeAtEnd = /(\d+\.\d{1,2})\s*$/;
 
 /**
