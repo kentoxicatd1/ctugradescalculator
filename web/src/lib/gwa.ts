@@ -72,49 +72,89 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     };
   }
 
-  // Dynamically import pdfjs-dist to prevent Next.js SSR crashes (DOMMatrix is not defined in Node)
-  const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+  let pdfjsLib;
+  try {
+    pdfjsLib = await import('pdfjs-dist');
+  } catch (err: any) {
+    throw new Error(`Failed to import pdfjs-dist: ${err.message}`);
+  }
 
-  const arrayBuffer = await file.arrayBuffer();
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+  } catch (err: any) {
+    throw new Error(`Failed to set workerSrc: ${err.message}`);
+  }
+
+  let arrayBuffer;
+  try {
+    arrayBuffer = await file.arrayBuffer();
+  } catch (err: any) {
+    throw new Error(`Failed to get file arrayBuffer: ${err.message}`);
+  }
   
-  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-  const pdf = await loadingTask.promise;
+  let pdf;
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    pdf = await loadingTask.promise;
+  } catch (err: any) {
+    throw new Error(`Failed during getDocument: ${err.message}`);
+  }
   
   let fullText = '';
   
   for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    // getTextContent doesn't natively "sortByPosition" perfectly like PDFBox, 
-    // but we can sort the items by their transform (y coordinate, then x coordinate)
-    const textContent = await page.getTextContent();
-    
-    // Sort items by vertical position (descending, since PDF y is bottom-up), then horizontal (ascending)
-    const items = textContent.items.map(item => item as any);
-    items.sort((a, b) => {
-      const yA = a.transform[5];
-      const yB = b.transform[5];
-      if (Math.abs(yA - yB) > 5) { // Threshold for considering them on the same line
-        return yB - yA;
-      }
-      return a.transform[4] - b.transform[4];
-    });
+    let page;
+    try {
+      page = await pdf.getPage(i);
+    } catch (err: any) {
+      throw new Error(`Failed to getPage(${i}): ${err.message}`);
+    }
 
-    let lastY = -1;
-    let pageText = '';
-    
-    for (const item of items) {
-      const currentY = item.transform[5];
-      if (lastY !== -1 && Math.abs(currentY - lastY) > 5) {
-        pageText += '\n'; // New line
-      } else if (lastY !== -1) {
-        pageText += ' '; // Same line spacing
-      }
-      pageText += item.str;
-      lastY = currentY;
+    let textContent;
+    try {
+      textContent = await page.getTextContent();
+    } catch (err: any) {
+      throw new Error(`Failed to getTextContent for page ${i}: ${err.message}`);
     }
     
-    fullText += pageText + '\f'; // Form feed between pages like PDFBox
+    let items;
+    try {
+      items = textContent.items.map(item => item as any);
+    } catch (err: any) {
+      throw new Error(`Failed to map textContent items: ${err.message}`);
+    }
+
+    try {
+      items.sort((a, b) => {
+        const yA = a.transform[5];
+        const yB = b.transform[5];
+        if (Math.abs(yA - yB) > 5) {
+          return yB - yA;
+        }
+        return a.transform[4] - b.transform[4];
+      });
+    } catch (err: any) {
+      throw new Error(`Failed to sort page items: ${err.message}`);
+    }
+
+    let pageText = '';
+    try {
+      let lastY = -1;
+      for (const item of items) {
+        const currentY = item.transform[5];
+        if (lastY !== -1 && Math.abs(currentY - lastY) > 5) {
+          pageText += '\n';
+        } else if (lastY !== -1) {
+          pageText += ' ';
+        }
+        pageText += item.str;
+        lastY = currentY;
+      }
+    } catch (err: any) {
+      throw new Error(`Failed during items loop on page ${i}: ${err.message}`);
+    }
+    
+    fullText += pageText + '\f';
   }
   
   return fullText;
