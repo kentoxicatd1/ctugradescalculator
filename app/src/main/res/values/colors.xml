@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#F5F6FA</color>
+    <color name="primary">#1A237E</color>
+    <color name="primary_dark">#0D1357</color>
+    <color name="accent">#FFD700</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text_primary">#1C1C2E</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="grade_passed">#16A34A</color>
+    <color name="grade_failed">#DC2626</color>
+    <color name="divider">#E5E7EB</color>
+    <color name="white">#FFFFFF</color>
+</resources>
