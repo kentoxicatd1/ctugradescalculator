@@ -44,9 +44,13 @@ export function FileUpload() {
       }
       
       setEntries(entries, file.name);
-    } catch (err) {
-      console.error('Failed to parse PDF:', err);
-      setError('An error occurred while parsing the PDF.');
+    } catch (err: any) {
+      console.error(err);
+      const detailedError = err instanceof Error 
+        ? `${err.name}: ${err.message}\n${err.stack || ''}` 
+        : String(err);
+      setError(detailedError);
+      reset();
     } finally {
       setIsProcessing(false);
     }
