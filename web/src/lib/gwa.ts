@@ -80,15 +80,7 @@ export async function extractTextFromPdf(file: File): Promise<string> {
   }
 
   try {
-    const isIOS = typeof window !== 'undefined' && (
-      /iP(hone|ad|od)/.test(navigator.userAgent) || 
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-    );
-    if (isIOS) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-    } else {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.v1.js`;
-    }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.v1.js`;
   } catch (err: any) {
     throw new Error(`Failed to set workerSrc: ${err.message}`);
   }
