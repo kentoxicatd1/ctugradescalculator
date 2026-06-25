@@ -80,7 +80,7 @@ export async function extractTextFromPdf(file: File): Promise<string> {
   }
 
   try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.v1.js`;
   } catch (err: any) {
     throw new Error(`Failed to set workerSrc: ${err.message}`);
   }
