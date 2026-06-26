@@ -1,0 +1,56 @@
+# Vercel Web Analytics Installation Report
+
+## Summary
+Successfully installed and configured Vercel Web Analytics for the CTU Grade Calculator Next.js application following the official Vercel documentation.
+
+## Changes Made
+
+### 1. Package Installation
+- **File**: `package.json`
+- **Action**: Added `@vercel/analytics` dependency
+- Installed the latest version of the package using npm
+
+### 2. Analytics Component Integration  
+- **File**: `src/app/layout.tsx`
+- **Changes**:
+  - Added import statement: `import { Analytics } from "@vercel/analytics/next";`
+  - Placed `<Analytics />` component inside the `<body>` tag of the root layout
+  - The component is positioned after the children content, following Next.js App Router best practices
+
+### 3. Lock File Update
+- **File**: `package-lock.json`
+- **Action**: Updated to include @vercel/analytics and all its dependencies
+
+## Implementation Details
+
+This is a Next.js 16.2.9 project using the App Router pattern. According to the official Vercel documentation (fetched from https://vercel.com/docs/analytics/quickstart), the correct integration method for Next.js App Router is to:
+
+1. Import the Analytics component from `@vercel/analytics/next`
+2. Add the component to the root layout file within the body element
+
+The Analytics component will automatically track page views and web vitals when deployed to Vercel. Once deployed and Web Analytics is enabled in the Vercel dashboard, the application will send visitor data to the `/_vercel/insights/*` routes.
+
+## Testing & Verification
+
+✅ **Build Test**: Successfully ran `npm run build` - build completed without errors
+✅ **Linter Test**: Successfully ran `npm run lint` - no linting errors found
+✅ **TypeScript Compilation**: All TypeScript files compiled successfully
+✅ **Code Structure**: Preserved all existing code, fonts, metadata, and styling
+
+## Next Steps for Deployment
+
+To activate Web Analytics after deployment:
+
+1. Navigate to your Vercel dashboard
+2. Select your project
+3. Go to the Analytics tab in the sidebar
+4. Click the "Enable" button to activate Web Analytics
+5. Deploy the application using `vercel deploy`
+6. After deployment, verify the analytics are working by checking the browser's Network tab for requests to `/_vercel/insights/view`
+
+## Files Modified
+- `web/package.json` - Added @vercel/analytics dependency
+- `web/package-lock.json` - Updated with new dependencies
+- `web/src/app/layout.tsx` - Added Analytics component
+
+All changes follow Next.js and Vercel best practices and maintain the existing code structure and functionality.
